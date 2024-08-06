@@ -1,0 +1,87 @@
+#include <SoftwareSerial.h>
+#include <LiquidCrystal.h>
+
+const int pinOutput1 = 6;   
+const int pinOutput2 = 10;  
+const int pinInputDivMul = A0; 
+const int pinInputAdd = A1;    
+const int pinInputSub = A2;    
+const int pinInputPow = A3;    
+const int bluetoothTx = 13; 
+const int bluetoothRx = 7; 
+const int rs = 12, en = 11, d4 = 5, d5 = 4, d6 = 3, d7 = 2;
+LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
+
+float lastResult = 0; 
+
+SoftwareSerial bluetooth(bluetoothRx, bluetoothTx);
+
+void setup() {
+  Serial.begin(9600);
+  bluetooth.begin(9600); 
+  pinMode(pinOutput1, OUTPUT);
+  pinMode(pinOutput2, OUTPUT);
+  pinMode(pinInputDivMul, INPUT);
+  pinMode(pinInputAdd, INPUT);
+  pinMode(pinInputSub, INPUT);
+  pinMode(pinInputPow, INPUT);
+}
+
+void loop() {
+  if (bluetooth.available()) {
+    String receivedString = bluetooth.readStringUntil('\n');
+    Serial.println(receivedString);
+    lcd.setCursor(0, 0);
+    lcd.print(receivedString); 
+  }
+
+  if (Serial.available() > 0) {
+    String line = Serial.readStringUntil('\n'); 
+    float result = 0; 
+
+    int opIndex = line.indexOf(' '); 
+    String operand1Str = line.substring(0, opIndex); 
+    float operand1 = operand1Str.equals("result") ? lastResult : operand1Str.toFloat(); 
+
+    line = line.substring(opIndex + 1); 
+    opIndex = line.indexOf(' '); 
+    String operand2Str = line.substring(0, opIndex); 
+    float operand2 = operand2Str.equals("result") ? lastResult : operand2Str.toFloat(); 
+    char operation = line.charAt(opIndex + 1); 
+    sendValues(operand1, operand2);
+
+    switch (operation) {
+      case '/':
+      case '*':
+        result = receiveResult(pinInputDivMul); 
+        break;
+      case '+':
+        result = 3*receiveResult(pinInputAdd); 
+        break;
+      case '-':
+        result = receiveResult(pinInputSub); 
+        break;
+      case '^':
+        result = receiveResult(pinInputPow); 
+        break;
+    }
+
+    lastResult = result; 
+    Serial.println(result); 
+  }
+}
+
+void sendValues(float val1, float val2) {
+  int pwmValue1 = constrain(val1 * 51 / 2.4, 0, 255);
+  int pwmValue2 = constrain(val2 * 51 / 2.4, 0, 255);
+
+  analogWrite(pinOutput1, pwmValue1);
+  analogWrite(pinOutput2, pwmValue2);
+  delay(5000);
+}
+
+float receiveResult(int pin) {
+  int analogValue = analogRead(pin); 
+  float result = analogValue * (5.0*2.4 / 1023.0); 
+  return result;
+}
