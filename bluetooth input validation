@@ -1,0 +1,30 @@
+#include <SoftwareSerial.h>
+
+const int bluetoothTx = 2;
+const int bluetoothRx = 3;
+
+SoftwareSerial bluetooth(bluetoothRx, bluetoothTx);
+
+void setup() {
+  Serial.begin(9600);
+  bluetooth.begin(9600);
+  pinMode(9, OUTPUT);
+  pinMode(10, OUTPUT);
+}
+
+void loop() {
+  if (bluetooth.available()) {
+    Serial.println("Bluetooth module is connected.");
+    String receivedString = bluetooth.readStringUntil('\n');
+    Serial.print("Received String: ");
+    Serial.println(receivedString);
+    char aChar = receivedString.charAt(0);
+    char bChar = receivedString.charAt(1);
+    float a = (aChar - '0') * 1.0; 
+    float b = (bChar - '0') * 1.0; 
+    analogWrite(9, a * 51);
+    analogWrite(10, b * 51);
+    Serial.println(a * 51);
+    Serial.println(b * 51);
+  } 
+}
